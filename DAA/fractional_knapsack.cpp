@@ -30,11 +30,11 @@ double fractionalKnapsack(int W, vector<Item>& items){
     for(const auto& item : items){
         if(W >= item.weight){
             // Take the whole item if there is enough capacity
-            W =- item.weight;
+            W -= item.weight;
             totalValue += item.value;
         }else{
             //Take the fractional part of the item
-            totalValue += item.value + ((double) W / item.weight);
+            totalValue += item.value * ((double) W / item.weight);
             break; //Knapsack is full
         }
     }
