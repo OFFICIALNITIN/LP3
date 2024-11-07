@@ -1,33 +1,51 @@
-#include<iostream>
-#include<queue>
-#include<unordered_map>
-#include<vector>
-
+#include <iostream>
+#include <unordered_map>
+#include <string>
+#include <queue>
 using namespace std;
 
-//Node structure for the huffman tree
-struct Node{
+// Define a structure for the Huffman Tree nodes
+struct Node {
     char ch;
     int freq;
     Node* left;
     Node* right;
 
-    Node(char character, int frequency): ch(character), freq(frequency), left(nullptr), right(nullptr) {}
+    Node(char c, int f) : ch(c), freq(f), left(nullptr), right(nullptr) {}
 };
 
-//Comparator for priority queue (min-heap)
+// Comparator for the priority queue
 struct Compare {
-    bool operator()(Node* left, Node* right){
+    bool operator()(Node* left, Node* right) {
         return left->freq > right->freq;
     }
 };
 
-//Function to generate the Huffman codes
-void generateHuffmanCodes(Node* root, string code, unordered_map<char,string>& huffmanCodes){
-    if(!root) return;
+// Function to build the Huffman Tree
+Node* buildHuffmanTree(const unordered_map<char, int>& freqMap) {
+    priority_queue<Node*, vector<Node*>, Compare> minHeap;
+    for (auto pair : freqMap) {
+        minHeap.push(new Node(pair.first, pair.second));
+    }
 
-    //If this node is a leaf node
-    if(!root->left && !root->right){
+    while (minHeap.size() > 1) {
+        Node* left = minHeap.top(); minHeap.pop();
+        Node* right = minHeap.top(); minHeap.pop();
+        int sum = left->freq + right->freq;
+        Node* newNode = new Node('\0', sum);
+        newNode->left = left;
+        newNode->right = right;
+        minHeap.push(newNode);
+    }
+
+    return minHeap.top();
+}
+
+// Function to generate Huffman codes
+void generateHuffmanCodes(Node* root, string code, unordered_map<char, string>& huffmanCodes) {
+    if (!root) return;
+
+    if (!root->left && !root->right) {
         huffmanCodes[root->ch] = code;
     }
 
@@ -35,111 +53,58 @@ void generateHuffmanCodes(Node* root, string code, unordered_map<char,string>& h
     generateHuffmanCodes(root->right, code + "1", huffmanCodes);
 }
 
-//Function to  build the huffman tree and generate codes
-unordered_map<char,string> huffmanEncoding(const string& text){
-    //Count frequency of each character
-    unordered_map<char,int> freq;
-    for(char ch : text){
-        freq[ch]++;
+// Function to encode a given text using Huffman coding
+string encodeText(const string& text, const unordered_map<char, string>& huffmanCodes) {
+    string encodedText = "";
+    for (char ch : text) {
+        encodedText += huffmanCodes.at(ch);
     }
-
-    //Create a priority queue to build the huffman tree
-    priority_queue<Node*, vector<Node*>, Compare> minHeap;
-    for(auto pair:freq){
-        minHeap.push(new Node(pair.first, pair.second));
-    }
-
-    //Build the huffman tree
-    while(minHeap.size() > 1){
-        Node* left = minHeap.top();
-        minHeap.pop();
-        Node* right = minHeap.top();
-        minHeap.pop();
-
-        //Create a new internal node with frequency equal to the sum of the two nodes
-        Node* newNode = new Node('\0', left->freq + right->freq);
-        newNode->left = left;
-        newNode->right = right;
-
-        minHeap.push(newNode);
-    }
-
-    //The root of the huffman tree
-    Node* root = minHeap.top();
-
-    //Generate Huffman codes
-    unordered_map<char,string> huffmanCodes;
-    generateHuffmanCodes(root,"",huffmanCodes);
-
-    return huffmanCodes;
+    return encodedText;
 }
 
-//Function to encode a given text using Huffman coding
-string encodeText(const string& text, const unordered_map<char,string>& huffmanCodes){
-    string encodeText = "";
-    for(char ch:text){
-        encodeText += huffmanCodes.at(ch);
-    }
-
-    return encodeText;
-}
-
-//Function to decode a given encoded text using huffman tree
-string decodeText(const string& encodedText, Node* root){
-    string decodeText = " ";
+// Function to decode a given encoded text using Huffman tree
+string decodeText(const string& encodedText, Node* root) {
+    string decodedText = "";
     Node* currentNode = root;
-    for(char bit : encodedText){
+    for (char bit : encodedText) {
         currentNode = (bit == '0') ? currentNode->left : currentNode->right;
 
-        //If we reach a leaf node
-        if(!currentNode->left && !currentNode->right){
-            decodeText += currentNode->ch;
+        if (!currentNode->left && !currentNode->right) {
+            decodedText += currentNode->ch;
             currentNode = root;
         }
     }
-
-    return decodeText;
+    return decodedText;
 }
 
-int main(){
+int main() {
     string text;
-    cout<<"Enter text to encode: ";
-    getline(cin,text);
+    cout << "Enter text to encode: ";
+    getline(cin, text);
 
-    //Build Huffman Tree and generate codes
-    unordered_map<char,string> huffmanCodes = huffmanEncoding(text);
-
-    cout<<"\nHuffman Code:\n";
-    for(auto pair : huffmanCodes){
-        cout<<pair.first<<" : "<<pair.second<<endl;
+    // Frequency map
+    unordered_map<char, int> freqMap;
+    for (char ch : text) {
+        freqMap[ch]++;
     }
 
-    //Encode the text
+    // Build Huffman Tree and generate codes
+    Node* root = buildHuffmanTree(freqMap);
+    unordered_map<char, string> huffmanCodes;
+    generateHuffmanCodes(root, "", huffmanCodes);
+
+    cout << "\nHuffman Codes:\n";
+    for (auto pair : huffmanCodes) {
+        cout << pair.first << " : " << pair.second << endl;
+    }
+
+    // Encode the text
     string encodedText = encodeText(text, huffmanCodes);
-    cout<<"\nEncoded Text: "<<encodedText<<endl;
+    cout << "\nEncoded Text: " << encodedText << endl;
 
-    //Decode the text
-    //Rebuild Huffman tree to decode
-    priority_queue<Node*, vector<Node*>, Compare> minHeap;
-    for(auto pair : huffmanCodes){
-        minHeap.push(new Node(pair.first, 1));
-    }
-
-    //Decode the text
-    string decodetext = decodeText(encodedText, minHeap.top());
-    cout<<"\nDecoded Text: "<<decodetext<<endl;
+    // Decode the text using the original Huffman tree root
+    string decodedText = decodeText(encodedText, root);
+    cout << "\nDecoded Text: " << decodedText << endl;
 
     return 0;
 }
-
-//Input
-// Enter text to encode: aaabbc
-
-
-//Output
-// Huffman Code:
-// b : 11
-// c : 10
-// a : 0
-
-// Encoded Text: 000111110
